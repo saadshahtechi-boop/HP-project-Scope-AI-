@@ -1,0 +1,90 @@
+# ============================================================================
+#  Techciko Health Suite — local orchestration
+#  Brings up Postgres, Redis, the NestJS API, and the Next.js web app.
+#
+#  Quick start:
+#    cp .env.example .env
+#    docker compose up --build
+#    # then, in another shell, apply schema + seed:
+#    docker compose exec api npx prisma migrate deploy
+#    docker compose exec api npx prisma db seed
+#
+#  Web:  http://localhost:3000
+#  API:  http://localhost:4000/api
+# ============================================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: techciko-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-techciko}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-techciko}
+      POSTGRES_DB: ${POSTGRES_DB:-techciko}
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-techciko}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: techciko-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: techciko-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 4000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-techciko}:${POSTGRES_PASSWORD:-techciko}@postgres:5432/${POSTGRES_DB:-techciko}?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
+      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-7d}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-claude-sonnet-4-6}
+    ports:
+      - '4000:4000'
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    container_name: techciko-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000/api}
+    ports:
+      - '3000:3000'
+
+volumes:
+  postgres_data:
+  redis_data:

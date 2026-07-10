@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Clinical design tokens. The artifact carried these as an inline JS object;
+ * here they live as CSS variables toggled by the `.dark` class (next-themes),
+ * so components reference semantic tokens instead of hard-coded hex values.
+ */
+:root {
+  --bg: #f1f5f9;
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --hover: #f8fafc;
+  --text: #0f172a;
+  --sub: #64748b;
+  --faint: #f8fafc;
+  --accent: #2563eb;
+}
+
+.dark {
+  --bg: #020617;
+  --card: #0b1220;
+  --border: #1e293b;
+  --hover: #0f172a;
+  --text: #f1f5f9;
+  --sub: #64748b;
+  --faint: #0f172a;
+  --accent: #2563eb;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Tabular figures for clinical data (tokens, MRNs, vitals) so numbers align. */
+.tabular-nums { font-variant-numeric: tabular-nums; }
