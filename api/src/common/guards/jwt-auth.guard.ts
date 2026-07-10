@@ -1,0 +1,25 @@
+import { ExecutionContext, Injectable } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { AuthGuard } from '@nestjs/passport';
+import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+
+/**
+ * Applied globally (see AppModule). Validates the JWT access token on every
+ * request except those explicitly marked @Public(). On success, Passport's
+ * JwtStrategy attaches the user to req.user.
+ */
+@Injectable()
+export class JwtAuthGuard extends AuthGuard('jwt') {
+  constructor(private readonly reflector: Reflector) {
+    super();
+  }
+
+  canActivate(context: ExecutionContext) {
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (isPublic) return true;
+    return super.canActivate(context);
+  }
+}
